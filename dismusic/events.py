@@ -17,10 +17,10 @@ class MusicEvents(commands.Cog):
         self.bot = bot
 
     async def handle_end_stuck_exception(self, player: DisPlayer, track: wavelink.abc.Playable):
-        if player.loop == "CURRENT":
+        if player.loop == "當前歌曲":
             return await player.play(track)
 
-        if player.loop == "PLAYLIST":
+        if player.loop == "播放列表":
             await player.queue.put(track)
 
         player._source = None

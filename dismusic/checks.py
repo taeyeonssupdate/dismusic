@@ -6,7 +6,7 @@ from .errors import MustBeSameChannel, NotConnectedToVoice, PlayerNotConnected
 def voice_connected():
     def predicate(ctx: commands.Context):
         if not ctx.author.voice:
-            raise NotConnectedToVoice("You are not connected to any voice channel.")
+            raise NotConnectedToVoice("你不在語音0.0")
 
         return True
 
@@ -16,7 +16,7 @@ def voice_connected():
 def player_connected():
     def predicate(ctx: commands.Context):
         if not ctx.voice_client:
-            raise PlayerNotConnected("Player is not connected to any voice channel.")
+            raise PlayerNotConnected("我不在語音裡 讓我加入試試？")
 
         return True
 
@@ -26,10 +26,10 @@ def player_connected():
 def in_same_channel():
     def predicate(ctx: commands.Context):
         if not ctx.voice_client:
-            raise PlayerNotConnected("Player is not connected to any voice channel.")
+            raise PlayerNotConnected("我不在語音裡 讓我加入試試？")
 
         if ctx.voice_client.channel.id != ctx.author.voice.channel.id:
-            raise MustBeSameChannel("You must be in the same voice channel as the player.")
+            raise MustBeSameChannel("你跟偶不在同個頻率上 嘖嘖")
 
         return True
 
@@ -39,13 +39,13 @@ def in_same_channel():
 def voice_channel_player():
     def predicate(ctx: commands.Context):
         if not ctx.author.voice:
-            raise NotConnectedToVoice("You are not connected to any voice channel.")
+            raise NotConnectedToVoice("你不在語音0.0")
 
         if not ctx.voice_client:
-            raise PlayerNotConnected("Player is not connected to any voice channel.")
+            raise PlayerNotConnected("我不在語音裡 讓我加入試試？")
 
         if ctx.voice_client.channel.id != ctx.author.voice.channel.id:
-            raise MustBeSameChannel("You must be in the same voice channel as the player.")
+            raise MustBeSameChannel("你跟偶不在同個頻率上 嘖嘖")
 
         return True
 
