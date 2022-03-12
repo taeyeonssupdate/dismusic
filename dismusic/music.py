@@ -2,7 +2,7 @@ import asyncio
 
 import async_timeout
 import wavelink
-from discord import ClientException, Color, Embed, ApplicationContext, Member, Message, message_command, user_command
+from discord import ClientException, ApplicationContext, Member, Message, message_command, user_command
 from discord.ext import commands
 from wavelink import (
     LavalinkException,
@@ -38,7 +38,7 @@ class Music(commands.Cog):
         if ctx.author.voice.channel.id != player.channel.id:
             raise MustBeSameChannel("你跟偶不在同個頻率上 嘖嘖")
 
-        track_provider = {
+        track_providers = {
             "yt": YouTubeTrack,
             "ytpl": YouTubePlaylist,
             "ytmusic": YouTubeMusicTrack,
@@ -46,13 +46,20 @@ class Music(commands.Cog):
             "spotify": SpotifyTrack,
         }
 
+        query = query.strip("<>")
         msg = await ctx.send(f"搜尋 `{query}` :mag_right:")
 
-        provider: Provider = track_provider.get(provider) if provider else track_provider.get(player.track_provider)
+        track_provider = provider if provider else player.track_provider
+
+        if track_provider == "yt" and "playlist" in query:
+            provider = "ytpl"
+
+        provider: Provider = track_providers.get(provider) if provider else track_providers.get(player.track_provider)
 
         nodes = self.get_nodes()
 
         tracks = list()
+
         for node in nodes:
             try:
                 with async_timeout.timeout(20):
