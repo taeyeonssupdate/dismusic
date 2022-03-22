@@ -3,6 +3,7 @@ import math
 
 from discord import Color, Embed, Forbidden, InvalidArgument, NotFound, HTTPException
 
+import _emojis as emojis
 
 class Paginator:
     def __init__(self, ctx, player) -> None:
@@ -10,7 +11,8 @@ class Paginator:
         self.player = player
 
     @staticmethod
-    def get_length(length):
+    def get_length(queue):
+        length = sum([track.length for track in queue._queue])
         if length > 3600:
             length = f"{int(length // 3600)}h {int(length % 3600 // 60)}m {int(length % 60)}s"
         elif length > 60:
@@ -20,7 +22,7 @@ class Paginator:
 
         return length
 
-    def create_embed(self, tracks, current_page, total_pages, one_page=False):
+    def create_embed(self, tracks, current_page, total_pages):
         embed = Embed(color=Color(0x2F3136))
         embed.set_author(
             name="Queue",
@@ -33,22 +35,18 @@ class Paginator:
             next_song = ""
 
         description = next_song
-        queue_length = 0
-
-        for index, track in enumerate(self.player.queue._queue):
-            queue_length += track.length
+        queue_length = self.get_length(self.player.queue)
 
         for index, track in enumerate(tracks):
             description += f"{current_page * 10 + index + 1}. [{track.title}]({track.uri}) \n"
 
         embed.description = description
 
-
-        if one_page:
-            embed.set_footer(text=f"{len(self.player.queue._queue)} tracks, {self.get_length(queue_length)}")
+        if total_pages == 1:
+            embed.set_footer(text=f"{len(self.player.queue._queue)} tracks, {queue_length}")
         else:
             embed.set_footer(
-                text=f"Page {current_page + 1}/{total_pages}, {len(self.player.queue._queue)} tracks, {self.get_length(queue_length)}"
+                text=f"Page {current_page + 1}/{total_pages}, {len(self.player.queue._queue)} tracks, {queue_length}"
             )
 
         return embed
@@ -56,42 +54,49 @@ class Paginator:
     async def start(self):
         per_page = 10
         current_page = 0
+        track_list = list(self.player.queue._queue)
 
-        total_pages = math.ceil(len(self.player.queue._queue) / per_page)
+        total_pages = math.ceil(len(track_list) / per_page)
 
         msg = None
 
         while True:
-            track_list = list(self.player.queue._queue)
             tracks = track_list[current_page * per_page: (current_page + 1) * per_page]
-            embed = self.create_embed(tracks, current_page, total_pages, len(track_list) <= 10)
+            embed = self.create_embed(tracks, current_page, total_pages)
 
             if not msg:
                 msg = await self.ctx.send(embed=embed)
             else:
                 await msg.edit(embed=embed)
 
-
-            if len(track_list) > 10:
+            if total_pages > 1:
                 try:
-                    await msg.add_reaction("⬅️")
-                    await msg.add_reaction("➡️")
-                except (HTTPException, Forbidden, NotFound, InvalidArgument):
+                    await msg.add_reaction(emojis.FIRST)
+                    await msg.add_reaction(emojis.PREV)
+                    await msg.add_reaction(emojis.NEXT)
+                    await msg.add_reaction(emojis.LAST)
+                except (HTTPException, Forbidden, NotFound, InvalidArgument) as e:
+                    print(e)
                     pass
             else:
                 break
 
             def check(reaction, user):
-                return user == self.ctx.author and str(reaction.emoji) in ["⬅️", "➡️"] and reaction.message.id == msg.id
+                valid_reactions = [emojis.FIRST, emojis.PREV, emojis.NEXT, emojis.LAST]
+                return user == self.ctx.author and str(reaction.emoji) in valid_reactions and reaction.message.id == msg.id
 
             try:
                 reaction, user = await self.ctx.bot.wait_for("reaction_add", timeout=60.0, check=check)
             except asyncio.TimeoutError:
                 break
 
-            if str(reaction.emoji) == "⬅️":
+            if str(reaction.emoji) == emojis.PREV:
                 current_page = max(0, current_page - 1)
-            elif str(reaction.emoji) == "➡️":
+            elif str(reaction.emoji) == emojis.NEXT:
                 current_page = min(total_pages - 1, current_page + 1)
+            elif str(reaction.emoji) == emojis.FIRST:
+                current_page = 0
+            elif str(reaction.emoji) == emojis.LAST:
+                current_page = total_pages - 1
 
             await msg.remove_reaction(reaction.emoji, user)
