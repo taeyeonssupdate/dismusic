@@ -1,4 +1,5 @@
-PREV = "⬅️"
-NEXT = "➡️"
-FIRST = "⏮️"
-LAST = "⏭️"
+class emojis(object):
+    PREV = "⬅️"
+    NEXT = "➡️"
+    FIRST = "⏮️"
+    LAST = "⏭️"

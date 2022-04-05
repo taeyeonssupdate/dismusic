@@ -9,6 +9,56 @@ from wavelink import Player
 from .errors import InvalidLoopMode, NotEnoughSong, NothingIsPlaying
 
 
+class MusicControllerView(discord.ui.View):
+    def __init__(self, player):
+        super().__init__(timeout=None)
+        self.player = player
+
+    @discord.ui.button(
+        label="跳過 ⏭️",
+        style=discord.ButtonStyle.grey,
+        custom_id="persistent_view:grey",
+    )
+    async def grey(self, button: discord.ui.Button, interaction: discord.Interaction):
+
+        if self.player.loop == "當前歌曲":
+            self.player.loop = "無"
+
+        await self.player.stop()
+
+        self.player.client.dispatch("dismusic_track_skip", self.player)
+        await interaction.response.send_message("跳過 :track_next:", ephemeral=True)
+
+    @discord.ui.button(
+        label="暫停 ⏯️",
+        style=discord.ButtonStyle.green,
+        custom_id="persistent_view:green"
+    )
+    async def green(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if self.player.is_playing():
+
+            if self.player.is_paused():
+                await self.player.set_pause(pause=False)
+                self.player.client.dispatch("dismusic_player_resume", self.player)
+                return await interaction.response.send_message("播放 :musical_note: ", ephemeral=True)
+            else:
+                await self.player.set_pause(pause=True)
+                self.player.client.dispatch("dismusic_player_pause", self.player)
+                return await interaction.response.send_message("暫停 :pause_button: ", ephemeral=True)
+
+        await interaction.response.send_message("沒有在播放任何音源", ephemeral=True)
+
+    @discord.ui.button(
+        label="停止播放 ⏹️",
+        style=discord.ButtonStyle.red,
+        custom_id="persistent_view:red"
+    )
+    async def red(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await self.player.destroy()
+        await interaction.response.send_message("停止播放 :stop_button: ", ephemeral=True)
+        self.player.client.dispatch("dismusic_player_stop", self.player)
+
+
 class DisPlayer(Player):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -106,6 +156,6 @@ class DisPlayer(Player):
             embed.add_field(name="下一首", value=next_song, inline=False)
 
         if not ctx:
-            return await self.bound_channel.send(embed=embed)
+            return await self.bound_channel.send(embed=embed, view=MusicControllerView(self))
 
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, view=MusicControllerView(self))

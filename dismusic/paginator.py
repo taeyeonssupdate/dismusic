@@ -3,7 +3,7 @@ import math
 
 from discord import Color, Embed, Forbidden, InvalidArgument, NotFound, HTTPException
 
-import _emojis as emojis
+from ._emojis import emojis
 
 class Paginator:
     def __init__(self, ctx, player) -> None:
