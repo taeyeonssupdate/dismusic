@@ -138,7 +138,7 @@ class Music(commands.Cog):
         """Play a YouTube track"""
         await ctx.invoke(self.connect)
         await self.play_track(ctx, query, "yt")
-        
+
     @play.command(aliases=["ytpl"])
     @voice_connected()
     async def youtubeplaylist(self, ctx: commands.Context, *, query: str):
@@ -291,8 +291,12 @@ class Music(commands.Cog):
     @voice_connected()
     async def play_for_message(self, ctx: ApplicationContext, message: Message):
         """Play history song from message"""
-        if message.embeds:
-            await ctx.respond("測試版： 嘗試播放中...")
+        await ctx.respond("測試版： 嘗試播放中...")
+        url = message.content.replace("!p ", "").replace("-p ", "")
+        if url:
+            await ctx.invoke(self.connect)
+            await self.play_track(ctx, url)
+        elif message.embeds:
             await ctx.invoke(self.connect)
             await self.play_track(ctx, message.embeds[0].url)
         else:

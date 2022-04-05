@@ -10,53 +10,73 @@ from .errors import InvalidLoopMode, NotEnoughSong, NothingIsPlaying
 
 
 class MusicControllerView(discord.ui.View):
-    def __init__(self, player):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.player = player
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        self.clear_items()
+        self.stop()
 
     @discord.ui.button(
-        label="跳過 ⏭️",
+        label="跳過",
         style=discord.ButtonStyle.grey,
-        custom_id="persistent_view:grey",
+        emoji="⏭️",
+        custom_id="skip",
     )
     async def grey(self, button: discord.ui.Button, interaction: discord.Interaction):
+        player: DisPlayer = interaction.message.guild.voice_client
 
-        if self.player.loop == "當前歌曲":
-            self.player.loop = "無"
+        if player.loop == "當前歌曲":
+            player.loop = "無"
 
-        await self.player.stop()
+        await player.stop()
 
-        self.player.client.dispatch("dismusic_track_skip", self.player)
-        await interaction.response.send_message("跳過 :track_next:", ephemeral=True)
+        player.client.dispatch("dismusic_track_skip", player)
+        for child in self.children:
+            child.disabled = True
+        button.label = "已跳過"
+        await interaction.response.edit_message(view=self)
 
     @discord.ui.button(
-        label="暫停 ⏯️",
-        style=discord.ButtonStyle.green,
-        custom_id="persistent_view:green"
+        label="暫停",
+        style=discord.ButtonStyle.grey,
+        emoji="⏯️",
+        custom_id="pause_resume"
     )
     async def green(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if self.player.is_playing():
+        player: DisPlayer = interaction.message.guild.voice_client
 
-            if self.player.is_paused():
-                await self.player.set_pause(pause=False)
-                self.player.client.dispatch("dismusic_player_resume", self.player)
-                return await interaction.response.send_message("播放 :musical_note: ", ephemeral=True)
-            else:
-                await self.player.set_pause(pause=True)
-                self.player.client.dispatch("dismusic_player_pause", self.player)
-                return await interaction.response.send_message("暫停 :pause_button: ", ephemeral=True)
+        if not player.is_playing():
+            button.disabled = True
+            button.label = "沒有在播放任何音源"
+        elif player.is_paused():
+            button.label = "暫停"
+            await player.set_pause(pause=False)
+            player.client.dispatch("dismusic_player_resume", player)
+        else:
+            button.label = "播放"
+            await player.set_pause(pause=True)
+            player.client.dispatch("dismusic_player_pause", player)
 
-        await interaction.response.send_message("沒有在播放任何音源", ephemeral=True)
+        return await interaction.response.edit_message(view=self)
 
     @discord.ui.button(
-        label="停止播放 ⏹️",
-        style=discord.ButtonStyle.red,
-        custom_id="persistent_view:red"
+        label="停止播放",
+        style=discord.ButtonStyle.grey,
+        emoji="⏹️",
+        custom_id="stop"
     )
     async def red(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await self.player.destroy()
-        await interaction.response.send_message("停止播放 :stop_button: ", ephemeral=True)
-        self.player.client.dispatch("dismusic_player_stop", self.player)
+        player: DisPlayer = interaction.message.guild.voice_client
+
+        await player.destroy()
+        for child in self.children:
+            child.disabled = True
+        button.label = "已停止播放"
+        await interaction.response.edit_message(view=self)
+        player.client.dispatch("dismusic_player_stop", player)
 
 
 class DisPlayer(Player):
@@ -156,6 +176,6 @@ class DisPlayer(Player):
             embed.add_field(name="下一首", value=next_song, inline=False)
 
         if not ctx:
-            return await self.bound_channel.send(embed=embed, view=MusicControllerView(self))
+            return await self.bound_channel.send(embed=embed, view=MusicControllerView())
 
-        await ctx.send(embed=embed, view=MusicControllerView(self))
+        await ctx.send(embed=embed, view=MusicControllerView())
