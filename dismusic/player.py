@@ -19,6 +19,14 @@ class MusicControllerView(discord.ui.View):
         self.clear_items()
         self.stop()
 
+    async def get_player(interaction):
+        try:
+            player: DisPlayer = interaction.message.guild.getattr("voice_client", None)
+            if not player: raise AttributeError("no voice_client")
+        except Exception as e:
+            await interaction.message.channel.send(f"get player error: {e}")
+        return player
+
     @discord.ui.button(
         label="跳過",
         style=discord.ButtonStyle.grey,
@@ -26,7 +34,7 @@ class MusicControllerView(discord.ui.View):
         custom_id="skip",
     )
     async def grey(self, button: discord.ui.Button, interaction: discord.Interaction):
-        player: DisPlayer = interaction.message.guild.voice_client
+        player: DisPlayer = self.get_player(interaction)
 
         if player.loop == "當前歌曲":
             player.loop = "無"
@@ -46,7 +54,7 @@ class MusicControllerView(discord.ui.View):
         custom_id="pause_resume"
     )
     async def green(self, button: discord.ui.Button, interaction: discord.Interaction):
-        player: DisPlayer = interaction.message.guild.voice_client
+        player: DisPlayer = self.get_player(interaction)
 
         if not player.is_playing():
             button.disabled = True
@@ -69,7 +77,7 @@ class MusicControllerView(discord.ui.View):
         custom_id="stop"
     )
     async def red(self, button: discord.ui.Button, interaction: discord.Interaction):
-        player: DisPlayer = interaction.message.guild.voice_client
+        player: DisPlayer = self.get_player(interaction)
 
         await player.destroy()
         for child in self.children:
